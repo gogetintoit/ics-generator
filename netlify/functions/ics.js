@@ -70,8 +70,8 @@ exports.handler = async (event) => {
       jul:7, aug:8, sep:9, oct:10, nov:11, dec:12
     };
 
-    // Format: Apr 15 2026 (no comma — this is what Netlify receives after URL decoding)
-    const longMatch = dateStr.match(/^([A-Za-z]+)\s+(\d+)\s+(\d{4})$/);
+    // Format: Apr 15 2026 or Apr 15, 2026
+    const longMatch = dateStr.match(/^([A-Za-z]+)\s+(\d+),?\s+(\d{4})$/);
     if (longMatch) {
       const month = monthNames[longMatch[1].toLowerCase().substring(0,3)];
       const day   = parseInt(longMatch[2]);
