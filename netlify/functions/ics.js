@@ -4,14 +4,10 @@ exports.handler = async (event) => {
   const name      = p.name      || "Event";
   const date      = p.date      || "";
   const startTime = p.startTime || "";
-  const endTime   = p.endTime   || "";
   const state     = p.state     || "";
   const location  = p.location  || "";
   const desc      = p.desc      || "";
-  const orgname   = p.orgname   || "";
-  const orgemail  = p.orgemail  || "";
 
-  // Map US states to IANA timezones
   const stateTimezones = {
     "AL": "America/Chicago",
     "AK": "America/Anchorage",
@@ -67,32 +63,33 @@ exports.handler = async (event) => {
 
   const tz = stateTimezones[state.toUpperCase()] || "America/New_York";
 
-  function toICSDateTime(date, time) {
+  function parseTime(date, time) {
     const [month, day, year] = date.split("/");
     const [timePart, meridiem] = time.trim().split(" ");
     let [hours, minutes] = timePart.split(":").map(Number);
     if (meridiem.toUpperCase() === "PM" && hours !== 12) hours += 12;
     if (meridiem.toUpperCase() === "AM" && hours === 12) hours = 0;
-
-    const mm = String(month).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    const hh = String(hours).padStart(2, "0");
-    const min = String(minutes).padStart(2, "0");
-
-    return `${year}${mm}${dd}T${hh}${min}00`;
+    return { year: parseInt(year), month: parseInt(month), day: parseInt(day), hours, minutes };
   }
 
-  const startDT = toICSDateTime(date, startTime);
-  const endDT   = toICSDateTime(date, endTime);
+  function toICSString({ year, month, day, hours, minutes }) {
+    return `${year}${String(month).padStart(2,"0")}${String(day).padStart(2,"0")}T${String(hours).padStart(2,"0")}${String(minutes).padStart(2,"0")}00`;
+  }
+
+  const start = parseTime(date, startTime);
+  const end = { ...start, hours: start.hours + 2 };
+
+  const startDT = toICSString(start);
+  const endDT   = toICSString(end);
 
   const now = new Date();
   const dtstamp = now.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const uid = dtstamp + "@yourorg.com";
+  const uid = dtstamp + "@nafsbenefits.com";
 
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//YourOrg//ICS Generator//EN",
+    "PRODID:-//National Association Family Services//ICS Generator//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:REQUEST",
     "BEGIN:VEVENT",
@@ -103,7 +100,7 @@ exports.handler = async (event) => {
     `SUMMARY:${name}`,
     `DESCRIPTION:${desc}`,
     `LOCATION:${location}`,
-    `ORGANIZER;CN=${orgname}:mailto:${orgemail}`,
+    "ORGANIZER;CN=National Association Family Services:mailto:info@nafsbenefits.com",
     "STATUS:CONFIRMED",
     "SEQUENCE:0",
     "END:VEVENT",
