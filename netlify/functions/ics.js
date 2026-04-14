@@ -61,30 +61,69 @@ exports.handler = async (event) => {
     "WY": "America/Denver"
   };
 
-  const tz = stateTimezones[state.toUpperCase()] || "America/New_York";
+  const tz = stateTimezones[state.trim().toUpperCase()] || "America/New_York";
 
-  function parseTime(date, time) {
-    const [month, day, year] = date.split("/");
-    const [timePart, meridiem] = time.trim().split(" ");
-    let [hours, minutes] = timePart.split(":").map(Number);
-    if (meridiem.toUpperCase() === "PM" && hours !== 12) hours += 12;
-    if (meridiem.toUpperCase() === "AM" && hours === 12) hours = 0;
-    return { year: parseInt(year), month: parseInt(month), day: parseInt(day), hours, minutes };
+  function parseDate(dateStr) {
+    dateStr = dateStr.trim();
+
+    // Format: Apr 15 2026 or Apr 15, 2026
+    const monthNames = {
+      jan:1, feb:2, mar:3, apr:4, may:5, jun:6,
+      jul:7, aug:8, sep:9, oct:10, nov:11, dec:12
+    };
+    const longMatch = dateStr.match(/^([A-Za-z]+)\s+(\d+)\s*,?\s*(\d{4})$/);
+    if (longMatch) {
+      const month = monthNames[longMatch[1].toLowerCase().substring(0,3)];
+      const day   = parseInt(longMatch[2]);
+      const year  = parseInt(longMatch[3]);
+      return { year, month, day };
+    }
+
+    // Format: MM/DD/YYYY
+    const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+      return {
+        year:  parseInt(slashMatch[3]),
+        month: parseInt(slashMatch[1]),
+        day:   parseInt(slashMatch[2])
+      };
+    }
+
+    return null;
   }
 
-  function toICSString({ year, month, day, hours, minutes }) {
+  function parseTime(timeStr) {
+    timeStr = timeStr.trim();
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return { hours: 0, minutes: 0 };
+    let hours     = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const meridiem = match[3].toUpperCase();
+    if (meridiem === "PM" && hours !== 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return { hours, minutes };
+  }
+
+  function toICSString(year, month, day, hours, minutes) {
     return `${year}${String(month).padStart(2,"0")}${String(day).padStart(2,"0")}T${String(hours).padStart(2,"0")}${String(minutes).padStart(2,"0")}00`;
   }
 
-  const start = parseTime(date, startTime);
-  const end = { ...start, hours: start.hours + 2 };
+  const parsedDate = parseDate(date);
+  const parsedTime = parseTime(startTime);
 
-  const startDT = toICSString(start);
-  const endDT   = toICSString(end);
+  if (!parsedDate) {
+    return { statusCode: 400, body: "Invalid date format: " + date };
+  }
 
-  const now = new Date();
+  const { year, month, day } = parsedDate;
+  const { hours, minutes }   = parsedTime;
+
+  const startDT = toICSString(year, month, day, hours, minutes);
+  const endDT   = toICSString(year, month, day, hours + 2, minutes);
+
+  const now     = new Date();
   const dtstamp = now.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const uid = dtstamp + "@nafsbenefits.com";
+  const uid     = dtstamp + "@nafsbenefits.com";
 
   const ics = [
     "BEGIN:VCALENDAR",
