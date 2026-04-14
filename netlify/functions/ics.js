@@ -100,7 +100,7 @@ exports.handler = async (event) => {
     `SUMMARY:${name}`,
     `DESCRIPTION:${desc}`,
     `LOCATION:${location}`,
-    "ORGANIZER;CN=National Association Family Services:mailto:info@nafsbenefits.com",
+    "ORGANIZER;CN=National Association Family Services:mailto:jennifer.schell@nafsbenefits.com",
     "STATUS:CONFIRMED",
     "SEQUENCE:0",
     "END:VEVENT",
